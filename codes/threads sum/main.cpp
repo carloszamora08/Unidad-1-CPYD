@@ -3,16 +3,18 @@
 #include <memory>
 #include <vector>
 #include <random>
-
-std::random_device rd;
-std::mt19937 gen(rd());
-std::uniform_int_distribution<> distrib(1, 1000);
+#include <algorithm>
 
 class Summation {
+    int number;
     int total;
 
+    std::random_device rd;
+    std::mt19937 gen;
+    std::uniform_int_distribution<> distrib;
+
 public:
-    Summation() : total(0) {}
+    Summation(int number) : number(number), total(0), gen(rd()), distrib(1, 1000) {}
 
     void doSum() {
         for (int i = 0; i < 100; i++) {
@@ -20,8 +22,16 @@ public:
         }
     }
 
+    int Number() const {
+        return number;
+    }
+
     int Total() const {
         return total;
+    }
+
+    static bool greaterComparison(std::shared_ptr<Summation> summation1, std::shared_ptr<Summation> summation2) {
+        return summation1->Total() > summation2->Total();
     }
 };
 
@@ -32,7 +42,7 @@ int main() {
     std::vector<std::shared_ptr<Summation>> summations(TOTAL_THREADS);
 
     for (int i = 0; i < TOTAL_THREADS; i++) {
-        summations[i] = std::make_shared<Summation>();
+        summations[i] = std::make_shared<Summation>(i + 1);
         threads[i] = std::make_shared<std::thread>([&, i](){summations[i]->doSum();});
     }
 
@@ -40,19 +50,13 @@ int main() {
         threads[i]->join();
     }
 
-    int maxSum = 0;
-    int maxId;
-
     for (int i = 0; i < TOTAL_THREADS; i++) {
         std::cout << "El thread #" << i + 1 << " sumo: " << summations[i]->Total() << std::endl;
-
-        if (summations[i]->Total() > maxSum) {
-            maxSum = summations[i]->Total();
-            maxId = i;
-        }
     }
 
-    std::cout << "El thread con mayor puntuacion fue el #" << maxId + 1 << " y sumo: " << summations[maxId]->Total() << std::endl;
+    std::sort(summations.begin(), summations.end(), Summation::greaterComparison);
+
+    std::cout << "El thread con mayor puntuacion fue el #" << summations[0]->Number() << " y sumo: " << summations[0]->Total() << std::endl;
 
     return 0;
 }
